@@ -1,0 +1,10 @@
+[
+    {
+        "caption": "Exec Parser: Set parser",
+        "command": "exec_parser_set"
+    },
+    {
+        "caption": "Exec Parser: Parse & Paste",
+        "command": "exec_parser_paste"
+    }
+]

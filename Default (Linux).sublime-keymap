@@ -1,0 +1,4 @@
+[
+    {"keys": ["ctrl+shift+x"], "command": "exec_parser_set"},
+    {"keys": ["ctrl+shift+v"], "command": "exec_parser_paste"}
+]
