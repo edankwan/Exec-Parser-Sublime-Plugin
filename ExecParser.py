@@ -1,79 +1,201 @@
 import sublime
 import sublime_plugin
 import json
+import os
 import re
 
-settings = ''
-panelList = []
-commandList = []
-execCommand = ''
+SETTING_FILENAME = 'ExecParser.sublime-settings'
+COMMAND_PATH_PREFIX = {
+    'user' : os.path.join(sublime.packages_path(), 'User', 'Exec Parser', 'commands'),
+    'default' : os.path.join(sublime.packages_path(), 'Exec Parser', 'commands')
+}
+class ExecParserCore:
 
-def updateList():
-    global settings
-    global panelList
-    global commandList
-    global execCommand
+    settings = None
 
-    settings = sublime.load_settings('ExecParser.sublime-settings')
-    panelList = []
-    commandList = []
+    commands = None
 
-    commands = settings.get('commands')
-    currentCommand = settings.get('current_command')
-    for command in commands:
-        panelList.append([command.get('name'), command.get('description')])
+    # A three dimensional list are used for the view panel
+    viewPanelList = []
+    viewPanelListIndexes = []
 
-        execList = command.get('exec_lines')
-        execText = '\n'.join(execList)
-        commandList.append(execText)
-        if currentCommand == command.get('id'):
-            execCommand = execText
+    pasteCommandId = ''
+    duplicateCommandId = ''
+    pasteCommandCache = None
+    duplicateCommandCache = None
+
+    updateDefaultCommandOnChange = False
+
+    recentCommandList = []
+
+    def init(cls):
+        cls.settings = sublime.load_settings(SETTING_FILENAME)
+
+        cls.updateDefaultCommandOnChange = cls.settings.get('update_default_command_on_change')
+        cls.recentCommandList = cls.settings.get('recent_command_list')
+        cls.commands = cls.settings.get('commands')
+
+        cls.updatePasteCommand(cls.settings.get('paste_command_id'), True)
+        cls.updateDuplicateCommand(cls.settings.get('duplicate_command_id'), True)
+
+        # check if all of the recentCommandList are available in the commands list
+        # if the recent command doesn't exist anymore, remove it from the list
+        recentCommandList = cls.recentCommandList
+        commands = cls.commands
+        hasChanged = False
+        i = len(recentCommandList) - 1
+        while i > -1:
+            if commands.get(recentCommandList[i]) is None:
+                recentCommandList.pop(i)
+                hasChanged = True
+            i = i - 1
+        if hasChanged:
+            cls.settings.set('recent_command_list', cls.recentCommandList)
+            cls.saveSetting()
+
+        cls.updateViewPanelList()
+
+    def createListItem(cls, commandId):
+        command = cls.commands.get(commandId)
+        return [
+            command['name'],
+            command['description']
+        ]
+
+    def updateViewPanelList(cls):
+        viewPanelList = cls.viewPanelList = []
+        viewPanelListIndexes = cls.viewPanelListIndexes = []
+        recentCommandList = cls.recentCommandList
+
+        # put all recent commands to the viewPanelList
+        for i in range(0, len(recentCommandList)):
+            commandId = recentCommandList[i]
+            viewPanelList.append(cls.createListItem(commandId))
+            viewPanelListIndexes.append(commandId)
+
+        commands = cls.commands
+        tmpList = []
+        # put all commands in the list
+        for commandId in commands:
+            if commandId not in recentCommandList:
+                listItem = cls.createListItem(commandId)
+                listItem.append(commandId)
+                tmpList.append(listItem)
+        # use alphabetical order for the rest of the commands
+        tmpList.sort(lambda x, y: cmp(x[0].lower(),y[0].lower()))
+        for i in range(0, len(tmpList)):
+            viewPanelListIndexes.append(tmpList[i].pop())
+        viewPanelList.extend(tmpList)
+
+    def setRecentCommand(cls, commandId):
+        recentCommandList = cls.recentCommandList
+        i = len(recentCommandList) - 1
+        while i > -1:
+            if recentCommandList[i] == commandId:
+                recentCommandList.pop(i)
+                break
+            i = i - 1
+        cls.recentCommandList.insert(0, commandId)
+        cls.settings.set('recent_command_list', cls.recentCommandList)
+        cls.updateViewPanelList()
+
+    def updateCommandList(cls):
+        recentCommandList = cls.recentCommandList
+        viewPanelList = cls.viewPanelList = recentCommandList
+
+    def getCommandData(cls, commandId):
+        command = cls.commands[commandId]
+        filename = os.path.join(COMMAND_PATH_PREFIX[command['directory']], command['filename'] + '.py')
+        try:
+            f = open(filename, 'r')
+        except(IOError), e:
+            sublime.error_message('Exer Parser plugin error: File "' + filename + '" not found.')
+            return ''
+        else:
+            return f.read()
+
+    def updatePasteCommand(cls, commandId, isInit = False, forceUpdate = False):
+        if (cls.pasteCommandId != commandId) or (forceUpdate):
+            cls.pasteCommandId = commandId
+            cls.pasteCommandCache = cls.getCommandData(commandId)
+            if not isInit:
+                cls.setRecentCommand(commandId)
+                if cls.updateDefaultCommandOnChange:
+                    cls.settings.set('paste_command_id', commandId)
+                cls.saveSetting()
 
 
+    def updateDuplicateCommand(cls, commandId, isInit = False, forceUpdate = False):
+        if (cls.duplicateCommandId != commandId) or (forceUpdate):
+            cls.duplicateCommandId = commandId
+            cls.duplicateCommandCache = cls.getCommandData(commandId)
+            if not isInit:
+                cls.setRecentCommand(commandId)
+                if cls.updateDefaultCommandOnChange:
+                    cls.settings.set('duplicate_command_id', commandId)
+                cls.saveSetting()
+
+    def saveSetting(cls):
+        sublime.save_settings(SETTING_FILENAME)
+
+    init = classmethod(init)
+    createListItem = classmethod(createListItem)
+    updateViewPanelList = classmethod(updateViewPanelList)
+    setRecentCommand = classmethod(setRecentCommand)
+    updateCommandList = classmethod(updateCommandList)
+    getCommandData = classmethod(getCommandData)
+    updatePasteCommand = classmethod(updatePasteCommand)
+    updateDuplicateCommand = classmethod(updateDuplicateCommand)
+    saveSetting = classmethod(saveSetting)
+
+ExecParserCore.init()
 
 class ExecParserSetCommand(sublime_plugin.TextCommand):
+
+    commandId = ''
+    applyToPanelList = [
+        ['Paste only', 'Only apply the selected command to paste parser'],
+        ['Duplicate only', 'Only apply the selected command to duplicate parser'],
+        ['All', 'Apply the selected command to all parsers']
+    ]
+
     def run(self, edit):
-        self.view.window().show_quick_panel(panelList, self.onUpdate)
+        self.view.window().show_quick_panel(ExecParserCore.viewPanelList, self.onCommandUpdate)
 
-    def onUpdate(self, index):
-        updateList()
-        execCommand = commandList[index]
-        settings.set('current_command', settings.get('commands')[index].get('id'))
-        sublime.save_settings('ExecParser.sublime-settings')
+    def onCommandUpdate(self, index):
+        self.commandId = ExecParserCore.viewPanelListIndexes[index]
+        self.view.window().show_quick_panel(self.applyToPanelList, self.onApplyToUpdate)
 
-        
+    def onApplyToUpdate(self, index):
+        if (index == 0) or (index == 2):
+            ExecParserCore.updatePasteCommand(self.commandId)
+        if (index == 1) or (index == 2):
+            ExecParserCore.updateDuplicateCommand(self.commandId)
 
 class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
-    def parse(self, edit, region, text):
+    def parse(self, edit, region, output):
+        exec(ExecParserCore.pasteCommandCache)
         self.view.erase(edit, region)
-        exec(execCommand)
-        self.view.insert(edit, region.begin(), text)
+        self.view.insert(edit, region.begin(), output)
 
     def run(self, edit):
-        clipText = sublime.get_clipboard()
+        clipboardText = sublime.get_clipboard()
         regions = self.view.sel()
 
         if len(regions) > 1:
-            clipLines = clipText.split('\n')
-            if len(regions) == len(clipLines):
+            clipboardLines = clipboardText.split('\n')
+            if len(regions) == len(clipboardLines):
                 i = 0
                 for region in regions:
-                    self.parse(edit, region, clipLines[i])
+                    self.parse(edit, region, clipboardLines[i])
                     i = i + 1
             else:
                 for region in regions:
-                    self.parse(edit, region, clipText)
+                    self.parse(edit, region, clipboardText)
         else:
-            self.parse(edit, regions[0], clipText)
-
-
-
+            self.parse(edit, regions[0], clipboardText)
 
 class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         print 'TODO add exec parse for duplicate lines'
-
-
-
-updateList()

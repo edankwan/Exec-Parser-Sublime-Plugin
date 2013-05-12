@@ -1,34 +1,38 @@
 {
+    /*
+     default command, use none if you don't want to parse anything
+    */
+    "paste_command_id" : "none",
+    "duplicate_command_id" : "none",
 
-    "current_command" : "camel_case",
+    /*
+     If you want to update the default commands above when you set the new command, use "true" here
+    */
+    "update_default_command_on_change" : false,
 
-    "commands" : [
-        {
-            "id" : "none",
-            "name" : "None",
+    /*
+     recently used commands
+    */
+    "recent_command_list" : [],
+
+    "commands" : {
+        "none" : {
+            "name" : "none",
             "description" : "Do nothing",
-            "exec_lines" : []
+            "directory" : "default",
+            "filename" : "none"
         },
-        {
-            "id" : "snake_case",
+        "dash_case" : {
+            "name" : "dash-case",
+            "description" : "convert to dash case",
+            "directory" : "default",
+            "filename" : "dash-case"
+        },
+        "snake_case" : {
             "name" : "snake_case",
             "description" : "convert to snake case",
-            "exec_lines" : [
-                "text = re.sub(r'(.)([A-Z][a-z]+)', r'\\1_\\2', text)",
-                "text = re.sub(r'([a-z0-9])([A-Z])', r'\\1_\\2', text).lower()"
-            ]
-        },
-        {
-            "id" : "camel_case",
-            "name" : "camelCase",
-            "description" : "convert to camel case",
-            "exec_lines" : [
-                "def capitalize(matchObj):",
-                "    word = matchObj.expand(r'\\1')",
-                "    return word[0].upper() + word[1:]",
-                "text = re.sub(r'[_\\-\\s]*([^_\\-\\s]*)',  capitalize, text)",
-                "text = text[0].lower() + text[1:]"
-            ]
+            "directory" : "default",
+            "filename" : "snake-case"
         }
-    ]
+    }
 }

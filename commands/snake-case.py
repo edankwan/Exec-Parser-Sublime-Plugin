@@ -1,0 +1,6 @@
+output = re.sub(r'([a-z])([A-Z])', r'\1 \2', output)
+output = re.sub(r'[ \`\!\@\#\$\%\^\&\*\(\)\=\+\[\]\{\}\;\:\"\'\,\.\<\>\/\?]+', '-', output.lower())
+output = re.sub(re.compile(r'^-+', re.MULTILINE), '', output)
+output = re.sub(r'([^_])-+', r'\1_', output)
+output = re.sub(r'_-_?', r'_', output)
+output = re.sub(re.compile(r'_+$', re.MULTILINE), '', output)
