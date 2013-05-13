@@ -13,26 +13,5 @@
     /*
      recently used commands
     */
-    "recent_command_list" : [],
-
-    "commands" : {
-        "none" : {
-            "name" : "none",
-            "description" : "Do nothing",
-            "directory" : "default",
-            "filename" : "none"
-        },
-        "dash_case" : {
-            "name" : "dash-case",
-            "description" : "convert to dash case",
-            "directory" : "default",
-            "filename" : "dash-case"
-        },
-        "snake_case" : {
-            "name" : "snake_case",
-            "description" : "convert to snake case",
-            "directory" : "default",
-            "filename" : "snake-case"
-        }
-    }
+    "recent_command_list" : []
 }

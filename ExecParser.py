@@ -9,6 +9,10 @@ COMMAND_PATH_PREFIX = {
     'user' : os.path.join(sublime.packages_path(), 'User', 'Exec Parser', 'commands'),
     'default' : os.path.join(sublime.packages_path(), 'Exec Parser', 'commands')
 }
+COMMAND_LIST = {
+    'user' : os.path.join(sublime.packages_path(), 'User', 'Exec Parser', 'commands.json'),
+    'default' : os.path.join(sublime.packages_path(), 'Exec Parser', 'commands.json')
+}
 class ExecParserCore:
 
     settings = None
@@ -31,12 +35,16 @@ class ExecParserCore:
     def init(cls):
         cls.settings = sublime.load_settings(SETTING_FILENAME)
 
+        cls.commands = cls.readCommandJSON('default')
+        userCommands = cls.readCommandJSON('user')
+        for commandId in userCommands:
+            cls.commands[commandId] = userCommands[commandId]
+
         cls.updateDefaultCommandOnChange = cls.settings.get('update_default_command_on_change')
         cls.recentCommandList = cls.settings.get('recent_command_list')
-        cls.commands = cls.settings.get('commands')
-
         cls.updatePasteCommand(cls.settings.get('paste_command_id'), True)
         cls.updateDuplicateCommand(cls.settings.get('duplicate_command_id'), True)
+
 
         # check if all of the recentCommandList are available in the commands list
         # if the recent command doesn't exist anymore, remove it from the list
@@ -54,6 +62,20 @@ class ExecParserCore:
             cls.saveSetting()
 
         cls.updateViewPanelList()
+
+    def readCommandJSON(cls, directory):
+        try:
+            f = open(COMMAND_LIST[directory], 'r')
+        except(IOError), e:
+            return {}
+        else:
+            try:
+                commands = json.loads(f.read())
+            except(ValueError), e:
+                sublime.error_message('"' + directory + '" commands is not a valid json file.')
+                return {}
+            else:
+                return commands
 
     def createListItem(cls, commandId):
         command = cls.commands.get(commandId)
@@ -104,15 +126,20 @@ class ExecParserCore:
         viewPanelList = cls.viewPanelList = recentCommandList
 
     def getCommandData(cls, commandId):
-        command = cls.commands[commandId]
-        filename = os.path.join(COMMAND_PATH_PREFIX[command['directory']], command['filename'] + '.py')
         try:
-            f = open(filename, 'r')
-        except(IOError), e:
-            sublime.error_message('Exer Parser plugin error: File "' + filename + '" not found.')
+            command = cls.commands[commandId]
+        except(KeyError), e:
+            sublime.error_message('Command "' + commandId + '" no longer exist')
             return ''
         else:
-            return f.read()
+            filename = os.path.join(COMMAND_PATH_PREFIX[command['directory']], command['filename'] + '.py')
+            try:
+                f = open(filename, 'r')
+            except(IOError), e:
+                sublime.error_message('Exer Parser plugin error: File "' + filename + '" not found.')
+                return ''
+            else:
+                return f.read()
 
     def updatePasteCommand(cls, commandId, isInit = False, forceUpdate = False):
         if (cls.pasteCommandId != commandId) or (forceUpdate):
@@ -139,6 +166,7 @@ class ExecParserCore:
         sublime.save_settings(SETTING_FILENAME)
 
     init = classmethod(init)
+    readCommandJSON = classmethod(readCommandJSON)
     createListItem = classmethod(createListItem)
     updateViewPanelList = classmethod(updateViewPanelList)
     setRecentCommand = classmethod(setRecentCommand)

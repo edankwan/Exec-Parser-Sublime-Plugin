@@ -1,5 +1,8 @@
 # Changelog #
 
+## v0.3.1 (2013/05/13) ##
+- Error exceptions
+
 ## v0.3 (2013/05/13) ##
 - Added duplicate parser command
 - Set All as the default of the "apply to" command
