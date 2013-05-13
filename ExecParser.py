@@ -154,9 +154,9 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
 
     commandId = ''
     applyToPanelList = [
+        ['All', 'Apply the selected command to all parsers'],
         ['Paste only', 'Only apply the selected command to paste parser'],
-        ['Duplicate only', 'Only apply the selected command to duplicate parser'],
-        ['All', 'Apply the selected command to all parsers']
+        ['Duplicate only', 'Only apply the selected command to duplicate parser']
     ]
 
     def run(self, edit):
@@ -167,14 +167,17 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
         self.view.window().show_quick_panel(self.applyToPanelList, self.onApplyToUpdate)
 
     def onApplyToUpdate(self, index):
-        if (index == 0) or (index == 2):
+        if (index == 0) or (index == 1):
             ExecParserCore.updatePasteCommand(self.commandId)
-        if (index == 1) or (index == 2):
+        if (index == 0) or (index == 2):
             ExecParserCore.updateDuplicateCommand(self.commandId)
 
 class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
-    def parse(self, edit, region, output):
+    def parse(self, edit, region, clipboardText):
+        parserType = 'paste'
+        selectionText = self.view.substr(region)
+        output = clipboardText
         exec(ExecParserCore.pasteCommandCache)
         self.view.erase(edit, region)
         self.view.insert(edit, region.begin(), output)
@@ -197,5 +200,34 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
             self.parse(edit, regions[0], clipboardText)
 
 class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
+
+    def parseText(self, selectionText, clipboardText):
+        parserType = 'duplicate'
+        output = selectionText
+        exec(ExecParserCore.duplicateCommandCache)
+        return output
+
     def run(self, edit):
-        print 'TODO add exec parse for duplicate lines'
+        clipboardText = sublime.get_clipboard()
+        regions = self.view.sel()
+
+        i = len(regions) - 1
+        # using backward looping to ensure the infinite stack with regions.add()
+        while i > -1:
+            region = regions[i]
+            if region.empty():
+                line = self.view.line(region)
+                lineStr = self.view.substr(line)
+                matchObj = re.search('\S', lineStr)
+                if matchObj:
+                    self.view.insert(edit, line.end(), '\n' + lineStr[0:matchObj.start()] + self.parseText(lineStr[matchObj.start():], clipboardText))
+                else:
+                    self.view.insert(edit, line.end(), '\n' + lineStr)
+            else:
+                text = self.view.substr(region)
+                parsedText = self.parseText(self.view.substr(region), clipboardText)
+                self.view.insert(edit, region.end(), parsedText)
+                newRegion = sublime.Region(region.end(), region.end() + len(parsedText))
+                regions.subtract(region)
+                regions.add(newRegion)
+            i = i - 1
