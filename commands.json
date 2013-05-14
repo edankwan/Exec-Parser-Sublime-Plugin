@@ -16,5 +16,11 @@
         "description" : "convert to snake case",
         "directory" : "default",
         "filename" : "snake-case"
+    },
+    "camel_case" : {
+        "name" : "camelCase",
+        "description" : "convert to camel case",
+        "directory" : "default",
+        "filename" : "camel-case"
     }
 }

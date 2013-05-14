@@ -1,5 +1,8 @@
 # Changelog #
 
+## v0.3.2 (2013/05/14) ##
+- Bug fixing
+
 ## v0.3.1 (2013/05/13) ##
 - Error exceptions
 

@@ -61,7 +61,7 @@ class ExecParserCore:
             cls.settings.set('recent_command_list', cls.recentCommandList)
             cls.saveSetting()
 
-        cls.updateViewPanelList()
+        cls.setRecentCommand(cls.pasteCommandId)
 
     def readCommandJSON(cls, directory):
         try:
@@ -202,30 +202,32 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
 
 class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
-    def parse(self, edit, region, clipboardText):
+    def parseText(self, selectionText, clipboardText):
         parserType = 'paste'
-        selectionText = self.view.substr(region)
         output = clipboardText
         exec(ExecParserCore.pasteCommandCache)
-        self.view.erase(edit, region)
-        self.view.insert(edit, region.begin(), output)
+        return output
 
     def run(self, edit):
         clipboardText = sublime.get_clipboard()
+        lines = clipboardText.splitlines()
         regions = self.view.sel()
 
-        if len(regions) > 1:
-            clipboardLines = clipboardText.split('\n')
-            if len(regions) == len(clipboardLines):
-                i = 0
-                for region in regions:
-                    self.parse(edit, region, clipboardLines[i])
-                    i = i + 1
-            else:
-                for region in regions:
-                    self.parse(edit, region, clipboardText)
+        if (len(regions) > 1) and (len(regions) == len(lines)):
+            i = 0
+            for region in regions:
+                selectionText = self.view.substr(region)
+                self.view.erase(edit, region)
+                self.view.insert(edit, region.begin(), self.parseText(selectionText, lines[i]))
+                i = i + 1
         else:
-            self.parse(edit, regions[0], clipboardText)
+            region = regions[0]
+            selectionText = self.view.substr(region)
+            parsedTextArr = []
+            for i in range(0, len(lines)):
+                parsedTextArr.append(self.parseText(selectionText, lines[i]))
+            self.view.erase(edit, region)
+            self.view.insert(edit, region.begin(), '\n'.join(parsedTextArr))
 
 class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
 
@@ -253,7 +255,10 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
                     self.view.insert(edit, line.end(), '\n' + lineStr)
             else:
                 text = self.view.substr(region)
-                parsedText = self.parseText(self.view.substr(region), clipboardText)
+                lines = text.splitlines()
+                parsedText = ''
+                for j in range(0, len(lines)):
+                    parsedText += '\n' + self.parseText(lines[j], clipboardText)
                 self.view.insert(edit, region.end(), parsedText)
                 newRegion = sublime.Region(region.end(), region.end() + len(parsedText))
                 regions.subtract(region)
