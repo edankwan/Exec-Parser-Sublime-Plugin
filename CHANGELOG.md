@@ -1,5 +1,8 @@
 # Changelog #
 
+## v0.3.3 (2013/05/15) ##
+- Added X-to-Y command
+
 ## v0.3.2 (2013/05/14) ##
 - Bug fixing
 

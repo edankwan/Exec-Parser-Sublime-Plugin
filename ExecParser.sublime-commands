@@ -7,4 +7,8 @@
         "caption": "Exec Parser: Parse & Paste",
         "command": "exec_parser_paste"
     }
+    {
+        "caption": "Exec Parser: Parse & Duplicate",
+        "command": "exec_parser_duplicate"
+    }
 ]

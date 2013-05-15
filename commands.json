@@ -22,5 +22,11 @@
         "description" : "convert to camel case",
         "directory" : "default",
         "filename" : "camel-case"
+    },
+    "x_to_y" : {
+        "name" : "X to Y",
+        "description" : "convert X to Y, Width to Height and so on",
+        "directory" : "default",
+        "filename" : "x-to-y"
     }
 }

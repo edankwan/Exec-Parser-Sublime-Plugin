@@ -206,6 +206,7 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
         parserType = 'paste'
         output = clipboardText
         exec(ExecParserCore.pasteCommandCache)
+
         return output
 
     def run(self, edit):
