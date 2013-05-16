@@ -66,12 +66,12 @@ class ExecParserCore:
     def readCommandJSON(cls, directory):
         try:
             f = open(COMMAND_LIST[directory], 'r')
-        except(IOError), e:
+        except(IOError) as e:
             return {}
         else:
             try:
                 commands = json.loads(f.read())
-            except(ValueError), e:
+            except(ValueError) as e:
                 sublime.error_message('"' + directory + '" commands is not a valid json file.')
                 return {}
             else:
@@ -104,7 +104,9 @@ class ExecParserCore:
                 listItem.append(commandId)
                 tmpList.append(listItem)
         # use alphabetical order for the rest of the commands
-        tmpList.sort(lambda x, y: cmp(x[0].lower(),y[0].lower()))
+        def keyFunc(item):
+            return item[0]
+        tmpList.sort(key=keyFunc)
         for i in range(0, len(tmpList)):
             viewPanelListIndexes.append(tmpList[i].pop())
         viewPanelList.extend(tmpList)
@@ -128,14 +130,14 @@ class ExecParserCore:
     def getCommandData(cls, commandId):
         try:
             command = cls.commands[commandId]
-        except(KeyError), e:
+        except(KeyError) as e:
             sublime.error_message('Command "' + commandId + '" no longer exist')
             return ''
         else:
             filename = os.path.join(COMMAND_PATH_PREFIX[command['directory']], command['filename'] + '.py')
             try:
                 f = open(filename, 'r')
-            except(IOError), e:
+            except(IOError) as e:
                 sublime.error_message('Exer Parser plugin error: File "' + filename + '" not found.')
                 return ''
             else:
@@ -188,11 +190,12 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
     ]
 
     def run(self, edit):
-        self.view.window().show_quick_panel(ExecParserCore.viewPanelList, self.onCommandUpdate)
+        sublime.set_timeout(lambda: self.view.window().show_quick_panel(ExecParserCore.viewPanelList, self.onCommandUpdate), 1)
 
     def onCommandUpdate(self, index):
         self.commandId = ExecParserCore.viewPanelListIndexes[index]
-        self.view.window().show_quick_panel(self.applyToPanelList, self.onApplyToUpdate)
+        sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.applyToPanelList, self.onApplyToUpdate), 1)
+
 
     def onApplyToUpdate(self, index):
         if (index == 0) or (index == 1):
@@ -205,9 +208,9 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
     def parseText(self, selectionText, clipboardText):
         parserType = 'paste'
         output = clipboardText
-        exec(ExecParserCore.pasteCommandCache)
-
-        return output
+        localDict = locals()
+        exec(ExecParserCore.pasteCommandCache, None, localDict)
+        return localDict['output']
 
     def run(self, edit):
         clipboardText = sublime.get_clipboard()
@@ -235,8 +238,9 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
     def parseText(self, selectionText, clipboardText):
         parserType = 'duplicate'
         output = selectionText
-        exec(ExecParserCore.duplicateCommandCache)
-        return output
+        localDict = locals()
+        exec(ExecParserCore.duplicateCommandCache, None, localDict)
+        return localDict['output']
 
     def run(self, edit):
         clipboardText = sublime.get_clipboard()

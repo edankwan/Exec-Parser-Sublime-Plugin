@@ -37,7 +37,6 @@ while found:
             minIndex = foundIndex
     if not found:
         break
-    print tmp
     foundLen = len(SWITCH_PATTERNS[patternIndex][0])
     replaceList.append([index + minIndex, patternIndex])
     index = index + minIndex + foundLen
