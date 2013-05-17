@@ -1,22 +1,23 @@
 import sublime
 import sublime_plugin
+import shutil
 import json
 import os
 import re
 
+PROJECT_NAME = 'Exec Parser'
 SETTING_FILENAME = 'ExecParser.sublime-settings'
-COMMAND_PATH_PREFIX = {
-    'user' : os.path.join(sublime.packages_path(), 'User', 'Exec Parser', 'commands'),
-    'default' : os.path.join(sublime.packages_path(), 'Exec Parser', 'commands')
-}
-COMMAND_LIST = {
-    'user' : os.path.join(sublime.packages_path(), 'User', 'Exec Parser', 'commands.json'),
-    'default' : os.path.join(sublime.packages_path(), 'Exec Parser', 'commands.json')
-}
+COMMANDS_JSON_FILENAME = 'commands.json'
+FOLDERS = {}
+USER_PLUGIN_DIRECTORY = ''
+USER_COMMANDS_DIRECTORY = ''
+USER_COMMANDS_JSON_FILE_PATH = ''
+USER_COMMAND_TEMPLATE_FILE_PATH = ''
+
+
 class ExecParserCore:
 
     settings = None
-
     commands = None
 
     # A three dimensional list are used for the view panel
@@ -34,7 +35,7 @@ class ExecParserCore:
 
     def init(cls):
         cls.settings = sublime.load_settings(SETTING_FILENAME)
-
+        cls.install()
         cls.commands = cls.readCommandJSON('default')
         userCommands = cls.readCommandJSON('user')
         for commandId in userCommands:
@@ -63,18 +64,39 @@ class ExecParserCore:
 
         cls.setRecentCommand(cls.pasteCommandId)
 
+    def install(cls):
+        defaultDirectory = FOLDERS['default']
+        USER_PLUGIN_DIRECTORY = FOLDERS['user']
+        if not os.path.exists(USER_PLUGIN_DIRECTORY):
+            os.makedirs(USER_PLUGIN_DIRECTORY)
+        if not os.path.exists(USER_COMMANDS_JSON_FILE_PATH):
+            try:
+                f = open(USER_COMMANDS_JSON_FILE_PATH,'w+')
+            except(IOError) as e:
+                sublime.error_message('"' + USER_COMMANDS_JSON_FILE_PATH + '" commands file is not writable')
+            else:
+                f.write('{}')
+                f.close()
+        try:
+            os.makedirs(USER_COMMANDS_DIRECTORY)
+        except(OSError) as e:
+            pass
+
     def readCommandJSON(cls, directory):
         try:
-            f = open(COMMAND_LIST[directory], 'r')
+            f = open(os.path.join(FOLDERS[directory], COMMANDS_JSON_FILENAME), 'r')
         except(IOError) as e:
+            sublime.error_message('"' + directory + '" commands file is not readable')
             return {}
         else:
             try:
                 commands = json.loads(f.read())
             except(ValueError) as e:
+                f.close()
                 sublime.error_message('"' + directory + '" commands is not a valid json file.')
                 return {}
             else:
+                f.close()
                 return commands
 
     def createListItem(cls, commandId):
@@ -131,17 +153,19 @@ class ExecParserCore:
         try:
             command = cls.commands[commandId]
         except(KeyError) as e:
-            sublime.error_message('Command "' + commandId + '" no longer exist')
+            sublime.error_message('Command "' + commandId + '" does not exist')
             return ''
         else:
-            filename = os.path.join(COMMAND_PATH_PREFIX[command['directory']], command['filename'] + '.py')
+            filename = os.path.join(FOLDERS[command['directory']], 'commands', command['filename'] + '.py')
             try:
                 f = open(filename, 'r')
             except(IOError) as e:
                 sublime.error_message('Exer Parser plugin error: File "' + filename + '" not found.')
                 return ''
             else:
-                return f.read()
+                data = f.read()
+                f.close()
+                return data
 
     def updatePasteCommand(cls, commandId, isInit = False, forceUpdate = False):
         if (cls.pasteCommandId != commandId) or (forceUpdate):
@@ -167,7 +191,27 @@ class ExecParserCore:
     def saveSetting(cls):
         sublime.save_settings(SETTING_FILENAME)
 
+    def getAvailableUserCommandFileName(cls):
+        i = 1
+        while True:
+            filename = 'untitled-' + str(i)
+            if os.path.exists(os.path.join(USER_COMMANDS_DIRECTORY, filename) +'.py'):
+                i = i + 1
+            else:
+                return filename
+
+    def getAvailableUserCommandSuffix(cls):
+        jsonData = cls.readCommandJSON('user')
+        i = 1
+        while True:
+            if 'untitled_' + str(i) in jsonData:
+                i = i + 1
+            else:
+                return str(i)
+
+
     init = classmethod(init)
+    install = classmethod(install)
     readCommandJSON = classmethod(readCommandJSON)
     createListItem = classmethod(createListItem)
     updateViewPanelList = classmethod(updateViewPanelList)
@@ -178,12 +222,107 @@ class ExecParserCore:
     updateDuplicateCommand = classmethod(updateDuplicateCommand)
     saveSetting = classmethod(saveSetting)
 
-ExecParserCore.init()
+    getAvailableUserCommandFileName = classmethod(getAvailableUserCommandFileName)
+    getAvailableUserCommandSuffix = classmethod(getAvailableUserCommandSuffix)
+
+class ExecParserUserCommandOptionsCommand(sublime_plugin.TextCommand):
+
+    mainMenu = [
+        ['Reinitialize commands', 'Everytime you updated the user\'s command or ' + COMMANDS_JSON_FILENAME + ', you need to call this function to reinitialize the plugin.'],
+        ['Edit '+ COMMANDS_JSON_FILENAME, 'Edit the json file that stores the list of all the user\'s commands.'],
+        ['Add new command', 'Add a new user command.'],
+        ['Edit command', 'Edit an user command.'],
+        ['Remove command', 'Remove an user command.']
+    ]
+
+    userCommands = None
+    userViewPanelList = []
+    userViewPanelListIndexes = []
+
+    def run(self, edit):
+        sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.mainMenu, self.onMainMenuUpdate), 1)
+        # ExecParserCore.init()
+
+    def onMainMenuUpdate(self, index):
+        if index == 0:
+            ExecParserCore.init()
+        elif index == 1:
+            sublime.set_timeout(lambda: self.view.window().open_file(USER_COMMANDS_JSON_FILE_PATH), 1)
+        elif index == 2:
+            self.showAddInput()
+        elif (index == 3) or (index == 4):
+            self.userCommands = ExecParserCore.readCommandJSON('user')
+            self.userViewPanelList = []
+            self.userViewPanelListIndexes = []
+            for commandId in self.userCommands:
+                self.userViewPanelList.append(ExecParserCore.createListItem(commandId))
+                self.userViewPanelListIndexes.append(commandId)
+            if len(self.userViewPanelList) == 0:
+                sublime.error_message('Cannot find any user command.')
+            elif index == 3:
+                sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.userViewPanelList, self.onEdit), 1)
+            elif index == 4:
+                sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.userViewPanelList, self.onRemove), 1)
+
+    def onEdit(self, index):
+        if index < 0: return
+        commandId = self.userViewPanelListIndexes[index]
+        command = self.userCommands[commandId]
+        filePath = os.path.join(USER_COMMANDS_DIRECTORY, command.get('filename') + '.py')
+        if os.path.exists(filePath):
+            sublime.set_timeout(lambda: self.view.window().open_file(filePath), 100)
+        else:
+            sublime.error_message('"' + filePath + '" does not exist.')
+        
+    def onRemove(self, index):
+        if index < 0: return
+        commandId = self.userViewPanelListIndexes[index]
+        command = self.userCommands[commandId]
+        filePath = os.path.join(USER_COMMANDS_DIRECTORY, command.get('filename') + '.py')
+        if os.path.exists(filePath):
+            try:
+                f = open(USER_COMMANDS_JSON_FILE_PATH,'w+')
+            except(IOError) as e:
+                sublime.error_message('"' + directory + '" commands file is not writable')
+            else:
+                os.remove(filePath)
+                del self.userCommands[commandId]
+                f.write(json.dumps(self.userCommands, indent=4, sort_keys=False))
+                f.close()
+                ExecParserCore.init()
+        else:
+            sublime.error_message('"' + filePath + '" does not exist.')
+
+
+    def showAddInput(self):
+            sublime.set_timeout(lambda: self.view.window().show_input_panel('Filename: ', ExecParserCore.getAvailableUserCommandFileName(), self.onAdd, None, None), 1)
+
+    def onAdd(self, filename):
+        filePath = os.path.join(USER_COMMANDS_DIRECTORY, filename + '.py')
+        if os.path.exists(filePath):
+            sublime.error_message('File "' + filePath + '" already exists')
+            self.showAddInput()
+            return
+        jsonData = ExecParserCore.readCommandJSON('user')
+        suffix = ExecParserCore.getAvailableUserCommandSuffix()
+        jsonData['untitled_' + suffix] = json.loads('{ "name" : "Untitled ' + suffix + '", "description" : "A user command", "directory" : "user", "filename" : "' + filename + '"}')
+
+        try:
+            f = open(USER_COMMANDS_JSON_FILE_PATH,'w+')
+        except(IOError) as e:
+            sublime.error_message('"' + directory + '" commands file is not writable')
+        else:
+            f.write(json.dumps(jsonData, indent=4, sort_keys=False))
+            f.close()
+        shutil.copyfile(USER_COMMAND_TEMPLATE_FILE_PATH, filePath)
+        window = self.view.window()
+        sublime.set_timeout(lambda: window.open_file(USER_COMMANDS_JSON_FILE_PATH), 100)
+        sublime.set_timeout(lambda: window.open_file(filePath), 150)
 
 class ExecParserSetCommand(sublime_plugin.TextCommand):
 
     commandId = ''
-    applyToPanelList = [
+    menu = [
         ['All', 'Apply the selected command to all parsers'],
         ['Paste only', 'Only apply the selected command to paste parser'],
         ['Duplicate only', 'Only apply the selected command to duplicate parser']
@@ -193,11 +332,12 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
         sublime.set_timeout(lambda: self.view.window().show_quick_panel(ExecParserCore.viewPanelList, self.onCommandUpdate), 1)
 
     def onCommandUpdate(self, index):
+        if index < 0: return
         self.commandId = ExecParserCore.viewPanelListIndexes[index]
-        sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.applyToPanelList, self.onApplyToUpdate), 1)
-
+        sublime.set_timeout(lambda: self.view.window().show_quick_panel(self.menu, self.onApplyToUpdate), 1)
 
     def onApplyToUpdate(self, index):
+        if index < 0: return
         if (index == 0) or (index == 1):
             ExecParserCore.updatePasteCommand(self.commandId)
         if (index == 0) or (index == 2):
@@ -269,3 +409,22 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
                 regions.subtract(region)
                 regions.add(newRegion)
             i = i - 1
+
+
+def plugin_init():
+    
+    global FOLDERS
+    global USER_PLUGIN_DIRECTORY
+    global USER_COMMANDS_DIRECTORY
+    global USER_COMMANDS_JSON_FILE_PATH
+    global USER_COMMAND_TEMPLATE_FILE_PATH
+
+    FOLDERS['user'] = os.path.join(sublime.packages_path(), 'User', PROJECT_NAME)
+    FOLDERS['default'] = os.path.join(sublime.packages_path(), PROJECT_NAME)
+    USER_PLUGIN_DIRECTORY = FOLDERS['user']
+    USER_COMMANDS_DIRECTORY = os.path.join(USER_PLUGIN_DIRECTORY, 'commands')
+    USER_COMMANDS_JSON_FILE_PATH = os.path.join(USER_PLUGIN_DIRECTORY, COMMANDS_JSON_FILENAME)
+    USER_COMMAND_TEMPLATE_FILE_PATH = os.path.join(FOLDERS['default'], 'user-command-template.py')
+    ExecParserCore.init()
+
+sublime.set_timeout(plugin_init, 500)

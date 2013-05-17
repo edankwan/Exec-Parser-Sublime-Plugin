@@ -1,5 +1,9 @@
 # Changelog #
 
+## v0.4 (2013/05/16) ##
+- Added user commands options to allow add/edit/remove user commands in runtime
+- Better support for ST3
+
 ## v0.3.3 (2013/05/15) ##
 - Added X-to-Y command
 

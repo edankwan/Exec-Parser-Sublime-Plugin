@@ -1,4 +1,6 @@
 {
+
+    "current_version" : "0.4",
     /*
      default command, use none if you don't want to parse anything
     */
