@@ -7,25 +7,25 @@
     },
     "dash_case" : {
         "name" : "dash-case",
-        "description" : "convert to dash case",
+        "description" : "Convert to dash case",
         "directory" : "default",
         "filename" : "dash-case"
     },
     "snake_case" : {
         "name" : "snake_case",
-        "description" : "convert to snake case",
+        "description" : "Convert to snake case",
         "directory" : "default",
         "filename" : "snake-case"
     },
     "camel_case" : {
         "name" : "camelCase",
-        "description" : "convert to camel case",
+        "description" : "Convert to camel case",
         "directory" : "default",
         "filename" : "camel-case"
     },
     "x_to_y" : {
         "name" : "X to Y",
-        "description" : "convert X to Y, Width to Height and so on",
+        "description" : "Convert X to Y, Width to Height and so on",
         "directory" : "default",
         "filename" : "x-to-y"
     }
