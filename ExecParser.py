@@ -345,7 +345,7 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
 
 class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
-    def parseText(self, selectionText, clipboardText):
+    def parseText(self, selectionText, clipboardText, lineIndex, numOfLines):
         parserType = 'paste'
         output = clipboardText
         localDict = locals()
@@ -362,24 +362,25 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
             for region in regions:
                 selectionText = self.view.substr(region)
                 self.view.erase(edit, region)
-                self.view.insert(edit, region.begin(), self.parseText(selectionText, lines[i]))
+                self.view.insert(edit, region.begin(), self.parseText(selectionText, lines[i], i, len(lines)))
                 i = i + 1
         else:
             region = regions[0]
             selectionText = self.view.substr(region)
             parsedTextArr = []
             for i in range(0, len(lines)):
-                parsedTextArr.append(self.parseText(selectionText, lines[i]))
+                parsedTextArr.append(self.parseText(selectionText, lines[i], i, len(lines)))
             self.view.erase(edit, region)
             self.view.insert(edit, region.begin(), '\n'.join(parsedTextArr))
 
 class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
 
-    def parseText(self, selectionText, clipboardText):
+    def parseText(self, selectionText, clipboardText, lineIndex, numOfLines):
         parserType = 'duplicate'
         output = selectionText
         localDict = locals()
         exec(ExecParserCore.duplicateCommandCache, None, localDict)
+
         return localDict['output']
 
     def run(self, edit):
@@ -395,7 +396,7 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
                 lineStr = self.view.substr(line)
                 matchObj = re.search('\S', lineStr)
                 if matchObj:
-                    self.view.insert(edit, line.end(), '\n' + lineStr[0:matchObj.start()] + self.parseText(lineStr[matchObj.start():], clipboardText))
+                    self.view.insert(edit, line.end(), '\n' + lineStr[0:matchObj.start()] + self.parseText(lineStr[matchObj.start():], clipboardText, 0, 1))
                 else:
                     self.view.insert(edit, line.end(), '\n' + lineStr)
             else:
@@ -403,7 +404,7 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
                 lines = text.splitlines()
                 parsedTextArr = []
                 for j in range(0, len(lines)):
-                    parsedTextArr.append(self.parseText(lines[j], clipboardText))
+                    parsedTextArr.append(self.parseText(lines[j], clipboardText, j, len(lines)))
                 parsedText = '\n'.join(parsedTextArr)
                 self.view.insert(edit, region.end(), parsedText)
                 newRegion = sublime.Region(region.end(), region.end() + len(parsedText))
