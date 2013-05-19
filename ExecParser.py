@@ -273,7 +273,7 @@ class ExecParserUserCommandOptionsCommand(sublime_plugin.TextCommand):
             sublime.set_timeout(lambda: self.view.window().open_file(filePath), 100)
         else:
             sublime.error_message('"' + filePath + '" does not exist.')
-        
+
     def onRemove(self, index):
         if index < 0: return
         commandId = self.userViewPanelListIndexes[index]
@@ -401,9 +401,10 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
             else:
                 text = self.view.substr(region)
                 lines = text.splitlines()
-                parsedText = ''
+                parsedTextArr = []
                 for j in range(0, len(lines)):
-                    parsedText += '\n' + self.parseText(lines[j], clipboardText)
+                    parsedTextArr.append(self.parseText(lines[j], clipboardText))
+                parsedText = '\n'.join(parsedTextArr)
                 self.view.insert(edit, region.end(), parsedText)
                 newRegion = sublime.Region(region.end(), region.end() + len(parsedText))
                 regions.subtract(region)
@@ -412,7 +413,7 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
 
 
 def plugin_init():
-    
+
     global FOLDERS
     global USER_PLUGIN_DIRECTORY
     global USER_COMMANDS_DIRECTORY
