@@ -26,8 +26,8 @@ class ExecParserCore:
     viewPanelList = []
     viewPanelListIndexes = []
 
-    pasteCommandId = ''
-    duplicateCommandId = ''
+    pasteCommandId = None
+    duplicateCommandId = None
     pasteCommandCache = None
     duplicateCommandCache = None
 
@@ -45,8 +45,17 @@ class ExecParserCore:
 
         cls.updateDefaultCommandOnChange = cls.settings.get('update_default_command_on_change')
         cls.recentCommandList = cls.settings.get('recent_command_list')
-        cls.updatePasteCommand(cls.settings.get('paste_command_id'), True)
-        cls.updateDuplicateCommand(cls.settings.get('duplicate_command_id'), True)
+
+        if (cls.pasteCommandId is None):
+            commandId = cls.settings.get('paste_command_id')
+        else:
+            commandId = cls.pasteCommandId
+        cls.updatePasteCommand(commandId, True)
+        if (cls.duplicateCommandId is None):
+            commandId = cls.settings.get('duplicate_command_id')
+        else:
+            commandId = cls.duplicateCommandId
+        cls.updateDuplicateCommand(commandId, True)
 
 
         # check if all of the recentCommandList are available in the commands list
@@ -347,7 +356,7 @@ class ExecParserSetCommand(sublime_plugin.TextCommand):
 
 class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
-    def parseText(self, selectionText, clipboardText, lineIndex, numOfLines):
+    def parseText(self, output, selectionText, clipboardText, lineIndex, numOfLines):
         parserType = 'paste'
         output = clipboardText
         localDict = locals()
@@ -364,22 +373,21 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
             for region in regions:
                 selectionText = self.view.substr(region)
                 self.view.erase(edit, region)
-                self.view.insert(edit, region.begin(), self.parseText(selectionText, lines[i], i, len(lines)))
+                self.view.insert(edit, region.begin(), self.parseText(lines[i], selectionText, clipboardText, i, len(lines)))
                 i = i + 1
         else:
             region = regions[0]
             selectionText = self.view.substr(region)
             parsedTextArr = []
             for i in range(0, len(lines)):
-                parsedTextArr.append(self.parseText(selectionText, lines[i], i, len(lines)))
+                parsedTextArr.append(self.parseText(lines[i], selectionText, clipboardText, i, len(lines)))
             self.view.erase(edit, region)
             self.view.insert(edit, region.begin(), '\n'.join(parsedTextArr))
 
 class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
 
-    def parseText(self, selectionText, clipboardText, lineIndex, numOfLines):
+    def parseText(self, output, selectionText, clipboardText, lineIndex, numOfLines):
         parserType = 'duplicate'
-        output = selectionText
         localDict = locals()
         exec(ExecParserCore.duplicateCommandCache, None, localDict)
 
@@ -398,15 +406,16 @@ class ExecParserDuplicateCommand(sublime_plugin.TextCommand):
                 lineStr = self.view.substr(line)
                 matchObj = re.search('\S', lineStr)
                 if matchObj:
-                    self.view.insert(edit, line.end(), '\n' + lineStr[0:matchObj.start()] + self.parseText(lineStr[matchObj.start():], clipboardText, 0, 1))
+                    self.view.insert(edit, line.end(), '\n' + lineStr[0:matchObj.start()] + self.parseText(lineStr[matchObj.start():], '', clipboardText, 0, 1))
                 else:
+
                     self.view.insert(edit, line.end(), '\n' + lineStr)
             else:
                 text = self.view.substr(region)
                 lines = text.splitlines()
                 parsedTextArr = []
                 for j in range(0, len(lines)):
-                    parsedTextArr.append(self.parseText(lines[j], clipboardText, j, len(lines)))
+                    parsedTextArr.append(self.parseText(lines[j], text, clipboardText, j, len(lines)))
                 parsedText = '\n'.join(parsedTextArr)
                 self.view.insert(edit, region.end(), parsedText)
                 newRegion = sublime.Region(region.end(), region.end() + len(parsedText))

@@ -1,6 +1,9 @@
 # Changelog #
 
-## v0.4 (2013/05/16) ##
+## v0.4.1 (2013/05/20) ##
+- Expose multilines selectionText variable
+
+## v0.4.0 (2013/05/16) ##
 - Added user commands options to allow add/edit/remove user commands in runtime
 - Better support for ST3
 
