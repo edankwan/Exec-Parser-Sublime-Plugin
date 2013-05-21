@@ -46,12 +46,12 @@ class ExecParserCore:
         cls.updateDefaultCommandOnChange = cls.settings.get('update_default_command_on_change')
         cls.recentCommandList = cls.settings.get('recent_command_list')
 
-        if (cls.pasteCommandId is None):
+        if (cls.pasteCommandId is None) or (cls.commands[cls.pasteCommandId] is None):
             commandId = cls.settings.get('paste_command_id')
         else:
             commandId = cls.pasteCommandId
         cls.updatePasteCommand(commandId, True)
-        if (cls.duplicateCommandId is None):
+        if (cls.duplicateCommandId is None) or (cls.commands[cls.duplicateCommandId] is None):
             commandId = cls.settings.get('duplicate_command_id')
         else:
             commandId = cls.duplicateCommandId
@@ -178,8 +178,8 @@ class ExecParserCore:
                 f.close()
                 return data
 
-    def updatePasteCommand(cls, commandId, isInit = False, forceUpdate = False):
-        if (cls.pasteCommandId != commandId) or (forceUpdate):
+    def updatePasteCommand(cls, commandId, isInit = False):
+        if (cls.pasteCommandId != commandId) or (isInit):
             cls.pasteCommandId = commandId
             cls.pasteCommandCache = cls.getCommandData(commandId)
             if not isInit:
@@ -189,8 +189,8 @@ class ExecParserCore:
                 cls.saveSetting()
 
 
-    def updateDuplicateCommand(cls, commandId, isInit = False, forceUpdate = False):
-        if (cls.duplicateCommandId != commandId) or (forceUpdate):
+    def updateDuplicateCommand(cls, commandId, isInit = False):
+        if (cls.duplicateCommandId != commandId) or (isInit):
             cls.duplicateCommandId = commandId
             cls.duplicateCommandCache = cls.getCommandData(commandId)
             if not isInit:

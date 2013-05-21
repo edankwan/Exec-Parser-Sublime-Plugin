@@ -1,5 +1,9 @@
 # Changelog #
 
+## v0.4.3 (2013/05/21) ##
+- Force update the commandId after reinitialize the plugin
+- Avoid the commandId not found error after edited/removed the user commands.json
+
 ## v0.4.2 (2013/05/21) ##
 - Add new default command: Swap equal positions
 - Fixed paste parser command bug
