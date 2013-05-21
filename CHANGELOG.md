@@ -1,5 +1,9 @@
 # Changelog #
 
+## v0.4.2 (2013/05/21) ##
+- Add new default command: Swap equal positions
+- Fixed paste parser command bug
+
 ## v0.4.1 (2013/05/20) ##
 - Expose multilines selectionText variable
 

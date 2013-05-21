@@ -45,6 +45,9 @@ By default, there are several built-in commands which are ready to use after you
     X to Y
     //Convert X to Y, Width to Height and so on
 
+    Swap equal positions
+    //Change var a = b; into var b = a;
+
 ### Use the commands ###
 First of all, you need to choose the command you want to use for your parser commands(paste/duplicate). Let's say you want to change the paste command to paste the words in your clipboard with **camelCase**, you can do the following steps:
 	

@@ -358,7 +358,6 @@ class ExecParserPasteCommand(sublime_plugin.TextCommand):
 
     def parseText(self, output, selectionText, clipboardText, lineIndex, numOfLines):
         parserType = 'paste'
-        output = clipboardText
         localDict = locals()
         exec(ExecParserCore.pasteCommandCache, None, localDict)
         return localDict['output']

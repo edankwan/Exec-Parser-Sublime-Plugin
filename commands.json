@@ -28,5 +28,11 @@
         "description" : "Convert X to Y, Width to Height and so on",
         "directory" : "default",
         "filename" : "x-to-y"
+    },
+    "swap_equal_positions" : {
+        "name" : "Swap equal positions",
+        "description" : "Change var a = b; into var b = a;",
+        "directory" : "default",
+        "filename" : "swap-equal-positions"
     }
 }
