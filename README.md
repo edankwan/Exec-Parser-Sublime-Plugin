@@ -1,6 +1,12 @@
 # Sublime Text Plugin - Exec Parser #
 
-Exec Parser is a sublime plugin that allow users to use the built-in commands or to add custom commands *(Python)* to parse the content before pasting or duplicating line. It takes the advantages of multi-selection in Sublime and behaves exactly like the native paste and duplicate line functions in Sublime.
+[Exec Parser](https://github.com/edankwan/Exec-Parser-Sublime-Plugin) is a sublime plugin that allow users to use the built-in commands or to add custom commands *(Python)* to parse the content before pasting or duplicating line. It takes the advantages of multi-selection in Sublime and behaves exactly like the native paste and duplicate line functions in Sublime.
+
+**Internal X to Y plugin:** 
+![](https://raw.githubusercontent.com/edankwan/Exec-Parser-Sublime-Plugin/assets/x-to-y.gif)
+
+**Internal Camel case plugin:** 
+![](https://raw.githubusercontent.com/edankwan/Exec-Parser-Sublime-Plugin/assets/camel.gif)
 
 ## Installation ##
 - **Package Control** *(Recommended)*: Install [Package Control](http://wbond.net/sublime_packages/package_control) if you haven't installed it yet. Then use **Install Package** command to search for **Exec Parser**.  
