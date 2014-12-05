@@ -1,5 +1,8 @@
 # Changelog #
 
+## v0.4.4 (2014/05/12) ##
+- Add the default commands so that new user won't be confused with this plugin as doing nothing
+
 ## v0.4.3 (2013/05/21) ##
 - Force update the commandId after reinitialize the plugin
 - Avoid the commandId not found error after edited/removed the user commands.json
